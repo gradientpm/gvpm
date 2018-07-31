@@ -1,0 +1,47 @@
+<rules>
+    <!-- filename rules for computing MSE -->
+        
+    <technique name="G-VPM">
+        <prefix name="recons" out="" />
+    </technique>
+    
+    <technique name="G-BRE">
+        <prefix name="recons" out="" />	
+    </technique>
+
+    <technique name="G-Beam">
+        <prefix name="recons" out="" />
+    </technique>
+
+    <technique name="G-Plane">
+        <prefix name="recons" out="" />
+    </technique>
+
+    <technique name="G-BDPT">
+        <prefix name="recons" out="" />
+    </technique>
+    
+    <technique name="G-PT">
+        <prefix name="recons" out="" />
+    </technique>
+
+    <technique name="VPM">
+        <prefix name="" out="" />
+    </technique>
+    <technique name="BRE">
+        <prefix name="" out="" />
+    </technique>
+    <technique name="Beam">
+        <prefix name="" out="" />
+    </technique>
+    <technique name="Plane">
+        <prefix name="" out="" />
+    </technique>
+    
+    <technique name="PT">
+        <prefix name="pass" out="" />
+    </technique>
+    <technique name="BDPT">
+        <prefix name="pass" out="" />
+    </technique>
+</rules>

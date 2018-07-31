@@ -1,0 +1,1 @@
+-z -DcropY=1024 -DcropX=1792 -DcropWidth=128 -DcropHeight=56 -Dheight=1080 -Dwidth=1920 -p 4 -b 16 -o /temp_dd/igrida-fs1/agruson/boxFinalGP/out//150/1792_1024 /temp_dd/igrida-fs1/agruson/boxFinalGP/temp_150.xml 

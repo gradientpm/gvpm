@@ -1,0 +1,71 @@
+<Config>
+	<Techniques>
+		<Technique name="Reference" filename="Ref" />
+
+		<!-- PRIMAL -->
+		<Technique name="VPM" filename="VPM"/>
+		<Technique name="BRE" filename="BRE"/>
+		<Technique name="Beam 1D" filename="Beam"/>
+		<Technique name="Beam 3D" filename="Beam_3D"/>
+		<Technique name="Plane" filename="Plane"/>
+
+		<Technique name="G-VPM" filename="G-VPM_L1_areaMIS_null" prefix="recons"/>
+		<Technique name="G-BRE" filename="G-BRE_L1_areaMIS_null" prefix="recons"/>
+		<Technique name="G-Beam 1D" filename="G-Beam_L1_areaMIS_null" prefix="recons"/>
+		<Technique name="G-Beam 3D" filename="G-Beam_L1_areaMIS_null_3D" prefix="recons"/>
+		<Technique name="G-Plane" filename="G-Plane_L1_areaMIS" prefix="recons"/>
+	</Techniques>
+	<Curves>
+		<Entries>
+			<Entry technique="VPM"  color="#e31a1cff" dashed="false" />
+			<Entry technique="BRE"  color="#33a02cff" dashed="false" />
+			<Entry technique="Beam 1D" color="#b15928ff" dashed="false" />
+			<Entry technique="Beam 3D" color="#1f78b4ff" dashed="false" />
+			<Entry technique="Plane"   color="#6a3d9aff" dashed="false" />
+
+			<Entry technique="G-VPM"  color="#e31a1cff" dashed="true" />
+			<Entry technique="G-BRE"  color="#33a02cff" dashed="true" />
+			<Entry technique="G-Beam 1D" color="#b15928ff" dashed="true" />
+			<Entry technique="G-Beam 3D" color="#1f78b4ff" dashed="true" />
+			<Entry technique="G-Plane"   color="#6a3d9aff" dashed="true" />
+		</Entries>
+
+		<Section name="relMSE">
+			<Curve csv="relMSE" ylabel="relMSE value" xlabel="Rendering time (seconds)" log="false" />
+			<Curve csv="relMSE" ylabel="log(relMSE value)" xlabel="Log(Rendering time)" log="true" />
+		</Section>
+	</Curves>
+	<Comparisons>
+		<!-- The main comparison !!!! -->
+		<Compare title="Comparison between primal- and gradient- volume photon mapping">
+			<Element technique="Reference" />
+			<Element technique="Reference" />
+			<Element technique="VPM" />
+			<Element technique="G-VPM" />
+		</Compare>
+		<Compare title="Comparison between primal- and gradient- beam radiance estimate">
+			<Element technique="Reference" />
+			<Element technique="Reference" />
+			<Element technique="BRE" />
+			<Element technique="G-BRE" />
+		</Compare>
+		<Compare title="Comparison between primal- and gradient- photon beam (with 3D kernel)">
+			<Element technique="Reference" />
+			<Element technique="Reference" />
+			<Element technique="Beam 3D" />
+			<Element technique="G-Beam 3D" />
+		</Compare>
+		<Compare title="Comparison between primal- and gradient- photon beam (with 1D kernel)">
+			<Element technique="Reference" />
+			<Element technique="Reference" />
+			<Element technique="Beam 1D" />
+			<Element technique="G-Beam 1D" />
+		</Compare>
+		<Compare title="Comparison between primal- and gradient- photon planes (with 1D kernel)">
+			<Element technique="Reference" />
+			<Element technique="Reference" />
+			<Element technique="Plane" />
+			<Element technique="G-Plane" />
+		</Compare>
+	</Comparisons>
+</Config>

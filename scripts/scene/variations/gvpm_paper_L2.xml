@@ -1,0 +1,35 @@
+<Test>
+    <SelectedTechniques>
+      <!-- The gradient approaches -->
+      <Selected name="G-VPM_L2_areaMIS_null" />
+      <Selected name="G-BRE_L2_areaMIS_null" />
+      <Selected name="G-Beam_L2_areaMIS_null" />
+      <Selected name="G-BDPT_L2" />
+      <Selected name="G-PT_L2" />
+
+
+
+      <!-- L1 -->
+      <!--<Selected name="G-VPM_L1_areaMIS_null" />
+      <Selected name="G-BRE_L1_areaMIS_null" />
+      <Selected name="G-Beam_L1_areaMIS_null" />
+      <Selected name="G-BDPT_L1" />
+      <Selected name="G-PT_L1" />-->
+
+
+      <!-- The non-gradient approaches -->
+      <Selected name="VPM" />
+      <Selected name="BRE" />
+      <Selected name="Beam" />
+      <Selected name="BDPT" />
+      <Selected name="PT" />
+
+    </SelectedTechniques>
+    <Changes>
+        <Change techniques="Beam;G-Beam_L1_areaMIS_null;G-Beam_L2_areaMIS_null" suffix="3D">
+            <string name="volTechnique" value="beam3d" />
+        </Change>
+    </Changes>
+    <DeletedTechniques>
+    </DeletedTechniques>
+</Test>
