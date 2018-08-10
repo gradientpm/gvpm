@@ -19,6 +19,7 @@ public:
   Spectrum shiftedMediumFlux[4];
   Spectrum weightedMediumFlux[4];
 protected:
+
   // The original informations
   Scene *scene;
   GatherPoint *baseGather;
@@ -26,9 +27,6 @@ protected:
   Ray baseRay;
   size_t currEdge;
   const Medium *medium;
-
-  // FIXME: Hack in order to evalutation the phase function
-  MediumSamplingRecord mRecNULL;
 
   // Additional informations
   const GPMConfig &config;
@@ -68,7 +66,7 @@ protected:
 
   // The global function for the shifting
   bool shiftPhoton(const Point &offsetPos, const Path *lt, size_t currVertex, const ShiftGatherPoint &shiftGP,
-                   const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                   const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                    GradientSamplingResult &result, Float photonRadius,
                    Float pdfBaseRay = 1.f, Float pdfShiftRay = 1.f,
                    Float additionalJacobian = 1.f);
@@ -78,15 +76,16 @@ protected:
    * If wi points to a light source, the transport mode is EImportance (like photon tracing)
    */
   inline Spectrum getVolumePhotonContrib(const Spectrum &flux,
+                                         const MediumSamplingRecord& shiftMRec,
                                          const Vector &wi,
                                          const Vector &wo,
                                          ETransportMode mode = ERadiance) {
-    PhaseFunctionSamplingRecord pRec(mRecNULL, wi, wo, mode);
-    return medium->getSigmaS() * flux * medium->getPhaseFunction()->eval(pRec);
+    PhaseFunctionSamplingRecord pRec(shiftMRec, wi, wo, mode);
+    return shiftMRec.sigmaS * flux * medium->getPhaseFunction()->eval(pRec);
   }
 
   bool shiftNull(const Spectrum &photonFlux, const Vector3 &photonWi, const ShiftGatherPoint &shiftGP,
-                 const Ray &shiftRay, const Spectrum &shiftCamTrans,
+                 const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                  GradientSamplingResult &result,
                  Float pdfBaseRay = 1.f, Float pdfShiftRay = 1.f,
                  Float additionalJacobian = 1.f);
@@ -94,14 +93,14 @@ protected:
 private:
   bool shiftPhotonDiffuse(const Point &offsetPos,
                           const Path *lt, size_t currVertex, const ShiftGatherPoint &shiftGP,
-                          const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                          const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                           GradientSamplingResult &result,
                           Float pdfBaseRay = 1.f, Float pdfShiftRay = 1.f,
                           Float additionalJacobian = 1.f);
 
   bool shiftPhotonMedium(const Point &offsetPos,
                          const Path *lt, size_t currVertex, const ShiftGatherPoint &shiftGP,
-                         const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                         const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                          GradientSamplingResult &result,
                          Float pdfBaseRay = 1.f, Float pdfShiftRay = 1.f,
                          Float additionalJacobian = 1.f);
@@ -109,7 +108,7 @@ private:
   bool shiftPhotonManifold(int b, int c,
                            const Point &offsetPos, const Path *lt,
                            const ShiftGatherPoint &shiftGP,
-                           const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                           const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                            GradientSamplingResult &result, Float photonRadius,
                            Float pdfBaseRay = 1.f, Float pdfShiftRay = 1.f,
                            Float additionalJacobian = 1.f);

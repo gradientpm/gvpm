@@ -42,37 +42,33 @@ struct Beam {
   Spectrum weight; // Initial weight of the beam
   Float t; // Initial distance for the scale reduction
   int depth;
+  Spectrum transmittance; // The transmittance along the ray
 
   // Just a protection if p2 is not set...
   bool invalid;
 
   Beam(const Point &p, const Medium *m, const Spectrum &w, Float dist, int curDepth) :
-      p1(p), medium(m), weight(w), t(dist), depth(curDepth) {
+      p1(p), medium(m), weight(w), t(dist), depth(curDepth), transmittance(0.0) {
     invalid = true;
   }
 
-  void setEndPoint(const Point &p) {
+  bool sampleDistance(Float distance, const Vector& direction) {
+    Ray rayTrans(p1, direction, 0.f);
+    rayTrans.mint = Epsilon;
+    rayTrans.maxt = distance;
+
+    MediumSamplingRecord mRec;
+    bool succeed = medium->sampleDistance(rayTrans, mRec, nullptr, EDistanceLong);
+
+    transmittance = mRec.transmittance;
+    p2 = rayTrans(mRec.t);
     invalid = false;
-    p2 = p;
+
+    return succeed;
   }
 
   bool isInvalid() const {
     return invalid;
-  }
-
-  Spectrum getTransmittance() const {
-
-    Vector dBeam = p2 - p1;
-    Float dBeamDist = dBeam.length();
-    dBeam /= dBeamDist;
-    Ray rayTrans(p1, dBeam, 0.f);
-    rayTrans.mint = Epsilon;
-    rayTrans.maxt = dBeamDist;
-
-    MediumSamplingRecord mRec;
-    medium->eval(rayTrans, mRec);
-
-    return mRec.transmittance;
   }
 };
 
@@ -923,12 +919,11 @@ public:
     // Build the second acceleration structure
     Log(EInfo, "Build BRE ...");
     photonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
-    ref<BeamRadianceEstimator> bre;
 
     // In BRE, the radius managed is directly the reduced size
     const Float breInitSize = m_smokeAABB.getBSphere().radius * globalScaleVolume * POURCENTAGE_BS;
     Log(EInfo, "BRE photon size: %f", breInitSize);
-    bre = new BeamRadianceEstimator(photonMap, 120, breInitSize, true);
+    ref<BeamRadianceEstimator> bre = new BeamRadianceEstimator(photonMap, 120, breInitSize, true);
 
     // Do the gathering
     ref<Timer> GatheringTime = new Timer;
@@ -1105,7 +1100,7 @@ public:
             // Sample an distance inside the beam
             MediumSamplingRecord mRec;
             Ray ray(beam.p1, d, Epsilon, distTotal, 0.f);
-            if (beam.medium->sampleDistance(ray, mRec, sampler, true, randSample)) {
+            if (beam.medium->sampleDistance(ray, mRec, sampler, EDistanceAlwaysValid, randSample)) {
               Spectrum resVolRad(0.f);
               MVol += photonMap->estimateVolumeRadiance(mRec, ray.d, querySize, resVolRad,
                                                         m_maxDepth == -1 ? INT_MAX : m_maxDepth

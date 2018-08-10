@@ -95,9 +95,9 @@ inline int randomWalkFromPixelToFirstDiffuse(Path &path, const Scene *scene, Sam
         }
       }
     } else if (curVertex->isMediumInteraction()) {
-      SLog(EError, "It is not possible to have medium interaction for the camera path.");
+      return -1;
     } else {
-      SLog(EInfo, "Unknown vertex type");
+      SLog(EError, "Unknow type");
       return -1;
     }
 

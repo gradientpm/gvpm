@@ -51,7 +51,7 @@ Note that these issues do not impact the results produced in our paper. If you w
 - G-PT: Does not include the optimized routine when an interface shadow the light source.
 - G-BDPT: Does not handle scenes with interfaces (due to unmanaged MIS computation).
 - (G-)Plane: visibility support.
-- Support heterogeneous participating media. 
+- ~~Support heterogeneous participating media.~~ (G-VPM heterogenous participating media is still missing)
 
 License
 =======

@@ -48,7 +48,7 @@ StatsCounter avgMISWeightME("GVPM", "Avg MIS weight ME", EAverage);
 
 bool AbstractVolumeGradientRecord::shiftPhoton(const Point &offsetPos, const Path *source, size_t currVertex,
                                                const ShiftGatherPoint &shiftGP,
-                                               const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                                               const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                                                GradientSamplingResult &result, Float photonRadius,
                                                Float pdfBaseRay, Float pdfShiftRay,
                                                Float additionalJacobian) {
@@ -73,18 +73,18 @@ bool AbstractVolumeGradientRecord::shiftPhoton(const Point &offsetPos, const Pat
     // Just use diffuse reconnection here
     ++DiffShiftVol;
     return shiftPhotonDiffuse(offsetPos, source, currVertex,
-                              shiftGP, shiftRay, shiftCamTransmittance, result, pdfBaseRay, pdfShiftRay,
+                              shiftGP, shiftRay, shiftMRec, result, pdfBaseRay, pdfShiftRay,
                               additionalJacobian);
   } else if (type == EMediumShift) {
     if (config.noMediumShift) {
       ++DiffShiftVol;
       return shiftPhotonDiffuse(offsetPos, source, currVertex,
-                                shiftGP, shiftRay, shiftCamTransmittance, result, pdfBaseRay, pdfShiftRay,
+                                shiftGP, shiftRay, shiftMRec, result, pdfBaseRay, pdfShiftRay,
                                 additionalJacobian);
     } else {
       ++DiffMediumVol;
       return shiftPhotonMedium(offsetPos, source, currVertex,
-                               shiftGP, shiftRay, shiftCamTransmittance, result, pdfBaseRay, pdfShiftRay,
+                               shiftGP, shiftRay, shiftMRec, result, pdfBaseRay, pdfShiftRay,
                                additionalJacobian);
     }
   } else if(type == EDiffuseShift && !shiftedEnoughRough) {
@@ -94,7 +94,7 @@ bool AbstractVolumeGradientRecord::shiftPhoton(const Point &offsetPos, const Pat
     } else {
       ++MEShiftVol;
       return shiftPhotonManifold(b, currVertex, offsetPos, source,
-                                 shiftGP, shiftRay, shiftCamTransmittance, result, photonRadius,
+                                 shiftGP, shiftRay, shiftMRec, result, photonRadius,
                                  pdfBaseRay, pdfShiftRay,
                                  additionalJacobian);
     }
@@ -105,7 +105,7 @@ bool AbstractVolumeGradientRecord::shiftPhoton(const Point &offsetPos, const Pat
     } else {
       ++MEShiftVol;
       return shiftPhotonManifold(b, currVertex, offsetPos, source,
-                                 shiftGP, shiftRay, shiftCamTransmittance, result, photonRadius,
+                                 shiftGP, shiftRay, shiftMRec, result, photonRadius,
                                  pdfBaseRay, pdfShiftRay,
                                  additionalJacobian);
     }
@@ -120,7 +120,7 @@ bool AbstractVolumeGradientRecord::shiftNull(const Spectrum &photonFlux,
                                              const Vector3 &photonWi,
                                              const ShiftGatherPoint &shiftGP,
                                              const Ray &shiftRay,
-                                             const Spectrum &shiftCamTrans,
+                                             const MediumSamplingRecord& shiftMRec,
                                              GradientSamplingResult &resultNull,
                                              Float pdfBaseRay,
                                              Float pdfShiftRay,
@@ -129,12 +129,12 @@ bool AbstractVolumeGradientRecord::shiftNull(const Spectrum &photonFlux,
   ++shiftNullVol;
 
   // In the volume, the shift is always correct
-  Spectrum contrib = getVolumePhotonContrib(photonFlux,
+  Spectrum contrib = getVolumePhotonContrib(photonFlux,shiftMRec,
                                             photonWi, -shiftRay.d, EImportance);
   Spectrum eyeShiftContrib = shiftGP.getWeightBeam(currEdge - 1) * // cummulative vertex(i-1).weight * edge(i-1).weight
       shiftGP.getWeightVertex(currEdge);    // vertex(i).weight
   resultNull.jacobian *= additionalJacobian;
-  resultNull.shiftedFlux = shiftCamTrans * contrib * eyeShiftContrib * resultNull.jacobian;
+  resultNull.shiftedFlux = shiftMRec.transmittance * contrib * eyeShiftContrib * resultNull.jacobian;
   resultNull.weight = 0.5f;
 
   // MIS in solid angle measure
@@ -160,7 +160,7 @@ bool AbstractVolumeGradientRecord::shiftNull(const Spectrum &photonFlux,
 bool AbstractVolumeGradientRecord::shiftPhotonManifold(int b, int c,
                                                        const Point &offsetPos, const Path *lt,
                                                        const ShiftGatherPoint &shiftGP,
-                                                       const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                                                       const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                                                        GradientSamplingResult &result, Float photonRadius,
                                                        Float pdfBaseRay, Float pdfShiftRay,
                                                        Float additionalJacobian) {
@@ -225,16 +225,17 @@ bool AbstractVolumeGradientRecord::shiftPhotonManifold(int b, int c,
 
   // In the volume, the shift is always correct
   Spectrum contrib = getVolumePhotonContrib(photonWeight,
+                                            shiftMRec,
                                             normalize(proposal.vertex(c - 1)->getPosition() - offsetPos),
                                             -shiftRay.d,
                                             EImportance);
   Spectrum eyeShiftContrib = shiftGP.getWeightBeam(currEdge - 1) * // cummulative vertex(i-1).weight * edge(i-1).weight
       shiftGP.getWeightVertex(currEdge);    // vertex(i).weight
-  // As every vertex on the camera path is simply surface vertex, the weight 
+  // As every vertex on the camera path is simply surface vertex, the weight
 
   // Default no MIS weight
   result.weight = 0.5f;
-  result.shiftedFlux = shiftCamTransmittance * contrib * eyeShiftContrib * result.jacobian;
+  result.shiftedFlux = shiftMRec.transmittance * contrib * eyeShiftContrib * result.jacobian;
 
   // Pdf check for offset path
   // FIXME: Double check this code
@@ -298,7 +299,7 @@ bool AbstractVolumeGradientRecord::shiftPhotonMedium(const Point &offsetPos,
                                                      size_t currVertex,
                                                      const ShiftGatherPoint &shiftGP,
                                                      const Ray &shiftRay,
-                                                     const Spectrum &shiftCamTransmittance,
+                                                     const MediumSamplingRecord& shiftMRec,
                                                      GradientSamplingResult &result,
                                                      Float pdfBaseRay,
                                                      Float pdfShiftRay,
@@ -338,7 +339,7 @@ bool AbstractVolumeGradientRecord::shiftPhotonMedium(const Point &offsetPos,
 
   result.jacobian *= sRec.jacobian * additionalJacobian;
   photonWeight *= sRec.throughtput;
-  Spectrum contrib = getVolumePhotonContrib(photonWeight,
+  Spectrum contrib = getVolumePhotonContrib(photonWeight, shiftMRec,
                                             -newW1, -shiftRay.d, EImportance);
 
   // We have to use the cache values here because the offset eye path is not explicitly constructed
@@ -347,7 +348,7 @@ bool AbstractVolumeGradientRecord::shiftPhotonMedium(const Point &offsetPos,
       eyeShiftContrib = shiftGP.getWeightBeam(currEdge - 1) *    // cummulative vertex(i-1).weight * edge(i-1).weight
       shiftGP.getWeightVertex(currEdge);          // vertex(i).weight
 
-  result.shiftedFlux = shiftCamTransmittance * contrib * eyeShiftContrib * result.jacobian;
+  result.shiftedFlux = shiftMRec.transmittance * contrib * eyeShiftContrib * result.jacobian;
   result.weight = 0.5f;
 
   if (config.useMIS) {
@@ -380,7 +381,7 @@ bool AbstractVolumeGradientRecord::shiftPhotonMedium(const Point &offsetPos,
 
 bool AbstractVolumeGradientRecord::shiftPhotonDiffuse(const Point &offsetPos, const Path *source, size_t currVertex,
                                                       const ShiftGatherPoint &shiftGP,
-                                                      const Ray &shiftRay, const Spectrum &shiftCamTransmittance,
+                                                      const Ray &shiftRay, const MediumSamplingRecord& shiftMRec,
                                                       GradientSamplingResult &result,
                                                       Float pdfBaseRay, Float pdfShiftRay,
                                                       Float additionalJacobian) {
@@ -444,7 +445,7 @@ bool AbstractVolumeGradientRecord::shiftPhotonDiffuse(const Point &offsetPos, co
   result.jacobian *= sRec.jacobian * additionalJacobian;
   photonWeight *= sRec.throughtput;
 
-  Spectrum contrib = getVolumePhotonContrib(photonWeight,
+  Spectrum contrib = getVolumePhotonContrib(photonWeight, shiftMRec,
                                             -dProj, -shiftRay.d, EImportance);
 
   // We have to use the cache values here because the offset eye path is not explicitly constructed
@@ -454,7 +455,7 @@ bool AbstractVolumeGradientRecord::shiftPhotonDiffuse(const Point &offsetPos, co
       shiftGP.getWeightVertex(currEdge);          // vertex(i).weight
   // FIXME: make sure BSDF value / area pdf is correct in shift_cameraPath.cpp for glossy material.
 
-  result.shiftedFlux = shiftCamTransmittance * contrib * eyeShiftContrib * result.jacobian;
+  result.shiftedFlux = shiftMRec.transmittance * contrib * eyeShiftContrib * result.jacobian;
   result.weight = 0.5f;
 
   // MIS for area measure is supported for now
@@ -518,7 +519,7 @@ void VolumeGradientPositionQuery::operator()(const GPhotonNodeKD &nodePhoton) {
     }
   }
 
-  Spectrum photonContrib = getVolumePhotonContrib(photon.weight,
+  Spectrum photonContrib = getVolumePhotonContrib(photon.weight, *baseMRec,
                                                   photon.its.wi, -baseRay.d, EImportance);
 
   Spectrum eyeContrib =
@@ -561,7 +562,7 @@ void VolumeGradientPositionQuery::operator()(const GPhotonNodeKD &nodePhoton) {
         Ray shiftRay(shiftGather.path.vertex(currEdge)->getPosition(),
                      shiftDir, Epsilon, shiftDistMax, 0.f);
         shiftMRec[i].t = shiftDistCamera[i];
-        photon.medium->eval(shiftRay, shiftMRec[i], true);
+        photon.medium->eval(shiftRay, shiftMRec[i], EDistanceAlwaysValid);
       }
     }
 
@@ -588,7 +589,7 @@ void VolumeGradientPositionQuery::operator()(const GPhotonNodeKD &nodePhoton) {
           alreadyShifted = true;
           shiftNull(photon.weight, photon.its.wi,
                     shiftGather, shiftRay,
-                    shiftMRec[i].transmittance, result,
+                    shiftMRec[i], result,
                     pdfBaseRay(), pdfShiftRay(i, photon.medium, shiftDistCamera[i]),
                     additionalJacobian);
 #if HAVE_ADDITIONAL_STATS
@@ -609,7 +610,7 @@ void VolumeGradientPositionQuery::operator()(const GPhotonNodeKD &nodePhoton) {
                                                nodePhoton.getData().vertexId,
                                                shiftGather,
                                                shiftRay,
-                                               shiftMRec[i].transmittance,
+                                               shiftMRec[i],
                                                result,
                                                searchRadius,
                                                pdfBaseRay(),
@@ -731,17 +732,17 @@ void VolumeGradientBREQuery::operator()(const GPhotonNodeKD &nodePhoton, Float p
 
   // Compute the photon contribution.
   Spectrum baseContrib(0.f);
-  Spectrum baseCamTransmittance;
   if (validBaseDistance) {
     // Evaluate transmittance
-    baseCamTransmittance = currMed->evalTransmittance(baseRay);
+    MediumSamplingRecord mRecBase;
+    medium->eval(baseRay, mRecBase);
 
     // Compute the base contrib
-    Spectrum contrib = getVolumePhotonContrib(currFlux, currWi, -baseRay.d, EImportance);
+    Spectrum contrib = getVolumePhotonContrib(currFlux, mRecBase, currWi, -baseRay.d, EImportance);
     Spectrum eyeContrib =
         baseGather->getWeightBeam(currEdge - 1) *   // cummulative vertex(i-1).weight * edge(i-1).weight
             baseGather->getWeightVertex(currEdge);  // * vertex(i).weight
-    baseContrib = baseCamTransmittance * contrib * eyeContrib;
+    baseContrib = mRecBase.transmittance * contrib * eyeContrib;
 
     // Only do here
     mediumFlux += (baseContrib / (kernelVol * pdfCameraPos)) * rrGlobalWeight;
@@ -791,7 +792,9 @@ void VolumeGradientBREQuery::operator()(const GPhotonNodeKD &nodePhoton, Float p
           const Float pdfShiftPos = 1.f / std::max(2.0 * deltaT, 0.0001);
 
           // The photon is inside, pick it
-          shiftNull(currFlux, currWi, shiftGather, shiftRay, baseCamTransmittance,
+          MediumSamplingRecord mRecShift;
+          currMed->eval(shiftRay, mRecShift);
+          shiftNull(currFlux, currWi, shiftGather, shiftRay, mRecShift,
                     result, pdfCameraPos, pdfShiftPos);
 
           // Make already shifted to avoid multiple shifts
@@ -824,10 +827,12 @@ void VolumeGradientBREQuery::operator()(const GPhotonNodeKD &nodePhoton, Float p
 
           // Repair the photon path
           if (config.debugShift != ENullShift) {
+            MediumSamplingRecord mRecShift;
+            currMed->eval(shiftRay, mRecShift);
             shiftPhoton(offsetPos, nodePhoton.getData().lightPath,
                         nodePhoton.getData().vertexId,
                         shiftGather, shiftRay,
-                        baseCamTransmittance, result, photonRadius,
+                        mRecShift, result, photonRadius,
                         pdfCameraPos, pdfShiftPos);
           }
         }

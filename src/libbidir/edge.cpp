@@ -38,39 +38,20 @@ bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
 	 *  - Short beam: Classical way where we can stop in the middle of the medium
 	 *  - Long beam: whatever, the never stop in the middle of the medium
 	 */
-	if(longBeam) {
-		if(surface) {
-			if(medium) {
-				Ray r(pred->getPosition(), d, 0.f, its.t, its.time);
-				medium->eval(r, mRec);
-			}
-
-			succ->type = PathVertex::ESurfaceInteraction;
-			succ->degenerate = !(its.getBSDF()->hasComponent(BSDF::ESmooth) ||
+	if (medium && medium->sampleDistance(Ray(ray, 0, its.t), mRec, sampler, longBeam? EDistanceLong : EDistanceNormal)) {
+		succ->type = PathVertex::EMediumInteraction;
+		succ->degenerate = false;
+		succ->getMediumSamplingRecord() = mRec;
+		length = mRec.t;
+	} else if (surface) {
+		succ->type = PathVertex::ESurfaceInteraction;
+		succ->degenerate = !(its.getBSDF()->hasComponent(BSDF::ESmooth) ||
 				its.shape->isEmitter() || its.shape->isSensor());
-			length = its.t;
-		} else {
-			if(medium) {
-				SLog(EWarn, "Sky beam case encounter");
-			}
-			return false; // No surface hitted
-		}
-
+		length = its.t;
 	} else {
-		if (medium && medium->sampleDistance(Ray(ray, 0, its.t), mRec, sampler)) {
-			succ->type = PathVertex::EMediumInteraction;
-			succ->degenerate = false;
-			succ->getMediumSamplingRecord() = mRec;
-			length = mRec.t;
-		} else if (surface) {
-			succ->type = PathVertex::ESurfaceInteraction;
-			succ->degenerate = !(its.getBSDF()->hasComponent(BSDF::ESmooth) ||
-					its.shape->isEmitter() || its.shape->isSensor());
-			length = its.t;
-		} else {
-			return false;
-		}
+		return false;
 	}
+
 	if (length == 0)
 		return false;
 
@@ -83,14 +64,14 @@ bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
                 return false;
         }
 
-		if(longBeam) {
-			// No sampling decision to stop inside the volume
-			// Determinstic decision
-			pdf[mode] = pdf[1-mode] = 1.f;
-		} else {
+//		if(longBeam) {
+//			// No sampling decision to stop inside the volume
+//			// Determinstic decision
+//			pdf[mode] = pdf[1-mode] = 1.f;
+//		} else {
 			pdf[mode]   = succ->isMediumInteraction() ? mRec.pdfSuccess    : mRec.pdfFailure;
 			pdf[1-mode] = pred->isMediumInteraction() ? mRec.pdfSuccessRev : mRec.pdfFailure;
-		}
+//		}
 		weight[mode]   = mRec.transmittance / pdf[mode];
 		weight[1-mode] = mRec.transmittance / pdf[1-mode];
 	}

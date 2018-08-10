@@ -582,6 +582,14 @@ public:
 		return true;
 	}
 
+  inline bool isOne() const {
+	  for (int i=0; i<N; i++) {
+		  if (s[i] != 1.0f)
+			  return false;
+	  }
+	  return true;
+  }
+
 	/// Serialize this spectrum to a stream
 	inline void serialize(Stream *stream) const {
 		stream->writeArray(s, N);

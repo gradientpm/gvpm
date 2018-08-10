@@ -587,19 +587,22 @@ public:
 	}
 
 	bool sampleDistance(const Ray &ray, MediumSamplingRecord &mRec,
-			Sampler *sampler, bool alwaysValid = false, Float randomNumber = -1) const {
-		if(alwaysValid) {
-			Log(EError, "Impossible to use always valid for heterogenous participating media");
-		}
-
-		Log(EError, "Not possible to get the distance");
-		Log(EError, "and random number");
-
+			Sampler *sampler, EDistanceSampling strategy = EDistanceNormal, Float randomNumber = -1) const {
 		Float integratedDensity, densityAtMinT, densityAtT;
 		bool success = false;
 
 		if (m_method == ESimpsonQuadrature) {
-			Float desiredDensity = -math::fastlog(1-sampler->next1D());
+			if(strategy == EDistanceAlwaysValid) {
+				Log(EError, "Impossible to use always valid for heterogenous participating media");
+			}
+
+			Float desiredDensity = [&]() -> Float {
+				if(strategy == EDistanceNormal) {
+					return -math::fastlog(1-sampler->next1D());
+				} else {
+					return -math::fastlog(Epsilon); // Close to 0
+				}
+			}();
 			if (invertDensityIntegral(ray, desiredDensity, integratedDensity,
 					mRec.t, densityAtMinT, densityAtT)) {
 				mRec.p = ray(mRec.t);
@@ -618,6 +621,9 @@ public:
 			mRec.transmittance = Spectrum(expVal);
 			mRec.time = ray.time;
 		} else {
+			if(strategy != EDistanceNormal) {
+				Log(EError, "Impossible to use other sampling inside the media with woodcock tracking");
+			}
 			/* The following information is invalid when
 			   using Woodcock-tracking */
 			mRec.pdfFailure = 1.0f;
@@ -669,8 +675,8 @@ public:
 		return success && mRec.pdfSuccess > 0;
 	}
 
-	void eval(const Ray &ray, MediumSamplingRecord &mRec, bool alwaysValid = false) const {
-		if(alwaysValid) {
+	void eval(const Ray &ray, MediumSamplingRecord &mRec, EDistanceSampling strategy = EDistanceNormal) const {
+		if(strategy != EDistanceNormal) {
 			Log(EError, "Impossible to use always valid for heterogenous participating media");
 		}
 
@@ -679,10 +685,13 @@ public:
 			Float mintDensity = lookupDensity(ray(ray.mint), ray.d) * m_scale;
 			Float maxtDensity = 0.0f;
 			Spectrum maxtAlbedo(0.0f);
+			Vector orientation(0.0);
 			if (ray.maxt < std::numeric_limits<Float>::infinity()) {
 				Point p = ray(ray.maxt);
 				maxtDensity = lookupDensity(p, ray.d) * m_scale;
 				maxtAlbedo = m_albedo->lookupSpectrum(p);
+				orientation = m_orientation != NULL
+                             ? m_orientation->lookupVector(p) : Vector(0.0f);
 			}
 			mRec.transmittance = Spectrum(expVal);
 			mRec.pdfFailure = expVal;
@@ -692,6 +701,7 @@ public:
 			mRec.sigmaA = Spectrum(maxtDensity) - mRec.sigmaS;
 			mRec.time = ray.time;
 			mRec.medium = this;
+			mRec.orientation = orientation;
 		} else {
 			Log(EError, "eval(): unsupported integration method!");
 		}
@@ -699,6 +709,10 @@ public:
 
 	bool isHomogeneous() const {
 		return false;
+	}
+
+  	bool isMedium(const Point& p) const {
+	  return m_density->lookupFloat(p) > 0.0;
 	}
 
 	std::string toString() const {

@@ -92,6 +92,10 @@ public:
 
 	virtual ~MicroflakePhaseFunction() { }
 
+  Float getMeanCosine() const {
+		return 0.0;
+	}
+
 	void configure() {
 		PhaseFunction::configure();
 		m_type = EAnisotropic | ENonSymmetric;

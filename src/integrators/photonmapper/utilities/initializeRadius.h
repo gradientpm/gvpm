@@ -82,20 +82,19 @@ public:
   }
 
   void regeneratePositionAndRadius() {
-    ref<Sensor> sensor = scene->getSensor();
-    bool needsApertureSample = sensor->needsApertureSample();
-    bool needsTimeSample = sensor->needsTimeSample();
-    ref<Film> film = sensor->getFilm();
-    Vector2i cropSize = film->getCropSize();
-//    Point2i cropOffset = film->getCropOffset();
-    int blockSize = scene->getBlockSize();
 
+    int blockSize = scene->getBlockSize();
     ref<Scheduler> sched = Scheduler::getInstance();
     size_t nCores = sched->getCoreCount();
     BlockScheduler blockSched(gatherBlocks->size(), nCores);
     blockSched.run([&](int blockIdx, int tid) {
-
       int i = blockIdx;
+
+      ref<Sensor> sensor = scene->getSensor();
+      bool needsApertureSample = sensor->needsApertureSample();
+      bool needsTimeSample = sensor->needsTimeSample();
+      ref<Film> film = sensor->getFilm();
+      Vector2i cropSize = film->getCropSize();
 
       // Get the sampler associated
       // to the block
@@ -158,41 +157,48 @@ public:
 
           // Participating media handling
           gatherPoint.beams.clear();
-          if (currentMedium != 0) {
-            // The camera is inside the medium,
-            // So we initialize a beam at this position
-            gatherPoint.beams.push_back(Beam(ray.o, currentMedium, Spectrum(1.f), 0.f, 1));
-          }
 
           // Bounce GP in the scene
           while ((depth < maxDepth || maxDepth == -1) && (!weight.isZero())) {
 
             // Bounce or send primary ray
             scene->rayIntersect(ray, gatherPoint.its);
-            if (gatherPoint.its.isValid()) {
-              // If we have hit a surface
-              // Finish the current beam if there is one
-              // and update the current weight
-              if (!gatherPoint.beams.empty() &&
-                  gatherPoint.beams.back().isInvalid()) {
-                // We will finish this beam
-                gatherPoint.beams.back().setEndPoint(gatherPoint.its.p);
 
-                // ---- Get the transmittance for the initial ray
-                Beam &beam = gatherPoint.beams.back();
-                weight *= beam.getTransmittance();
-              }
+            // If we are currently inside the media
+            // generate the beam
+            if(currentMedium != 0) {
+              {
+                Beam currentBeam(ray.o, currentMedium, weight, 0.f, depth);
+                bool succeed = currentBeam.sampleDistance(gatherPoint.its.t, ray.d);
+                weight *= currentBeam.transmittance;
 
-              if (m_directTracing && gatherPoint.its.isEmitter()) {
-                gatherPoint.emission += weight * gatherPoint.its.Le(-ray.d);
+                if(!succeed) {
+                  if(gatherPoint.its.isValid()) {
+                    // The beam did not get absorbed
+                    // Correct the position inside the smoke
+                    currentBeam.p2 = gatherPoint.its.p;
+                  } else {
+                    currentBeam.invalid = true;
+                  }
+                }
+
+                gatherPoint.beams.emplace_back(currentBeam);
+                if(succeed) {
+                  break;
+                }
               }
-            } else {
+            }
+
+            if(!gatherPoint.its.isValid()) {
               if (m_directTracing) {
                 // If no intersection, check the envmap
                 gatherPoint.emission += weight * scene->evalEnvironment(ray);
               }
-
               break; // No gather point here
+            } else {
+              if (m_directTracing && gatherPoint.its.isEmitter()) {
+                gatherPoint.emission += weight * gatherPoint.its.Le(-ray.d);
+              }
             }
 
             // Compute radius using the total distance.
@@ -323,14 +329,6 @@ public:
               // Update the current medium
               currentMedium = gatherPoint.its.getTargetMedium(ray.d);
               // FIXME: Handling volume inconsistency??
-            }
-
-            if (currentMedium != 0) {
-              // If we bounce inside a medium,
-              // Create an new beam to take care about this new ray segement
-              gatherPoint.beams.push_back(Beam(gatherPoint.its.p,
-                                               currentMedium,
-                                               weight, traveledDistance, depth));
             }
 
           } // End of while(true)

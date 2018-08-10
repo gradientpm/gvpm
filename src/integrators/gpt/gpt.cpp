@@ -78,6 +78,7 @@ StatsCounter TooShort("GPT", "TooShort", ENumberValue);
 StatsCounter InconsistentBSDFShift("GPT", "InconsistentBSDFShift", ENumberValue);
 StatsCounter HVSurfaceDisagreement("GPT", "HVSurfaceDisagreement", ENumberValue);
 StatsCounter HVStepsSurface("GPT", "Number of HV over surfaces", ENumberValue);
+StatsCounter ShiftZeroDensity("GPT", "Shift path kill 0 density", ENumberValue);
 
 /// A threshold to use in positive denominators to avoid division by zero.
 const Float D_EPSILON = (Float) (1e-19);
@@ -694,16 +695,28 @@ public:
                 ++TooShort;
                 shifted.alive = false;
               } else {
+                // Check that this particular position, we was able to sample a scattering event
                 Ray shiftRay = shifted.ray;
+                Point pMed = shiftRay(main.mRec.t);
+                if(!med->isMedium(pMed)) {
+                  ++ShiftZeroDensity;
+                  shifted.alive = false;
+                  continue;
+                }
+
                 shiftRay.maxt = main.mRec.t;
                 med->eval(shiftRay, shifted.mRec);
-
+                if(shifted.mRec.transmittance.isOne()) {
+                  ++ShiftZeroDensity;
+                  shifted.alive = false;
+                  continue;
+                }
                 shifted.throughput *= shifted.mRec.sigmaS * shifted.mRec.transmittance / main.mRec.pdfSuccess;
                 shifted.pdf *= shifted.mRec.pdfSuccess;
 
                 // Weird but mitsuba does not fill mRec when we eval
                 shifted.mRec.t = shiftRay.maxt - shiftRay.mint;
-                shifted.mRec.p = shiftRay(shifted.mRec.t);
+                shifted.mRec.p = pMed;
                 shifted.lastVolume = true;
               }
             }

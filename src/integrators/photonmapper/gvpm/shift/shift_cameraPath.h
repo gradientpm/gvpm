@@ -257,6 +257,15 @@ private:
         currInfo->weight *= shiftPath.edge(i - 1)->weight[ERadiance];
       }
 
+      if(baseVertex->isMediumInteraction() || shiftPath.vertex(i)->isMediumInteraction()) {
+        // This can happens when we get a too thick participating media.
+        // In this case we need to stop the shift operation as everything
+        // is already done
+        surfaceValid = false;
+        return false; // TODO: Do we need to recompute some information on the shift edge???
+        // TODO: Maybe we need to check if we was able to sample or not.
+      }
+
       const Intersection &baseIts = baseVertex->getIntersection();
       const BSDF *baseBSDF = baseIts.getBSDF();
       const Intersection &shiftIts = shiftPath.vertex(i)->getIntersection();

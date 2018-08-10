@@ -597,9 +597,7 @@ public:
    * @return Opposite geometry factor
    */
   inline Float GOp(size_t idVertex) const {
-    return geometryOpposingTerm(path.vertex(idVertex)->getPosition(),
-                                path.vertex(idVertex + 1)->getPosition(),
-                                path.vertex(idVertex + 1)->getGeometricNormal());
+    return geometryOpposingTerm(path, idVertex, idVertex+1);
   }
 
   /**

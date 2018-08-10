@@ -63,7 +63,61 @@ public:
 	GradientPathIntegrator(Stream *stream, InstanceManager *manager);
 
 
-	/// Starts the rendering process.
+  bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+				  int sceneResID, int sensorResID, int samplerResID) {
+	  MonteCarloIntegrator::preprocess(scene, queue, job, sceneResID, sensorResID, samplerResID);
+
+	  for (auto media: scene->getMedia()) {
+		  const Medium *m = media.get();
+		  bool foundAttachedMesh = false;
+		  // Check the meshes
+		  for (auto mesh: scene->getMeshes()) {
+			  if (mesh->getExteriorMedium() != NULL) {
+				  foundAttachedMesh = foundAttachedMesh || (mesh->getExteriorMedium() == m);
+			  }
+			  if (mesh->getInteriorMedium() != NULL) {
+				  foundAttachedMesh = foundAttachedMesh || (mesh->getInteriorMedium() == m);
+			  }
+			  if (foundAttachedMesh) {
+				  Log(EInfo, "Medium: %s attached to %s", m->toString().c_str(), mesh->toString().c_str());
+				  break; // Stop the loop
+			  }
+		  }
+		  if (foundAttachedMesh) {
+			  continue;// Do not need to check the shapes.
+		  }
+		  // Check the shapes
+		  for (auto mesh: scene->getShapes()) {
+			  if (mesh->getExteriorMedium() != NULL) {
+				  foundAttachedMesh = foundAttachedMesh || (mesh->getExteriorMedium() == m);
+			  }
+			  if (mesh->getInteriorMedium() != NULL) {
+				  foundAttachedMesh = foundAttachedMesh || (mesh->getInteriorMedium() == m);
+			  }
+			  if (foundAttachedMesh) {
+				  Log(EInfo, "Medium: %s attached to %s", m->toString().c_str(), mesh->toString().c_str());
+				  break; // Stop the loop
+			  }
+		  }
+
+		  if (!foundAttachedMesh) {
+			  Log(EError, "No shape define interior/exterior limit for the media: %s", m->toString().c_str());
+		  }
+	  }
+
+	  if (!(m_config.m_lightingInteractionMode & EAll2Surf)) {
+		  Log(EInfo, "Only volume rendering, change probability to sample the medium");
+		  auto medium = scene->getMedia().begin();
+		  while (medium != scene->getMedia().end()) {
+			  const_cast<Medium *>(medium->get())->computeOnlyVolumeInteraction();
+			  medium++;
+		  }
+	  }
+
+	  return true;
+  }
+
+  /// Starts the rendering process.
 	bool render(Scene *scene,
 		RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID);

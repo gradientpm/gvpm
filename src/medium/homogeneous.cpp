@@ -291,24 +291,28 @@ public:
 	}
 
 	bool sampleDistance(const Ray &ray, MediumSamplingRecord &mRec,
-			Sampler *sampler, bool alwaysValid = false, const Float randomNumber = -1) const {
+			Sampler *sampler, EDistanceSampling strategy = EDistanceNormal,
+			const Float randomNumber = -1) const {
 
 		// Generate the random number
 		Float rand = randomNumber;
-		if(rand == -1) rand = sampler->next1D();
+		if(strategy != EDistanceLong) {
+		  // TODO: Found a better way to handle this case (Distance long)
+		  if(rand == -1) rand = sampler->next1D();
+        }
 		mRec.randNumber = rand;
 
 		Float samplingDensity = m_samplingDensity;
 
-		if(alwaysValid && m_strategy != EBalance && m_strategy != ESingle) {
+		if(strategy == EDistanceAlwaysValid && m_strategy != EBalance && m_strategy != ESingle) {
 		  Log(EError, "Always sampling is only available for Balance/Single sampling routine.");
 		}
-		if(alwaysValid && std::isinf(ray.maxt)) {
+		if(strategy == EDistanceAlwaysValid && std::isinf(ray.maxt)) {
 		  Log(EError, "Impossible to use always valid with infinite distance (implementation 'issue')");
 		}
 
 		Float currentMediumSampling = m_mediumSamplingWeight;
-		if(alwaysValid && m_mediumSamplingWeight != 1.f) {
+		if(strategy == EDistanceAlwaysValid && m_mediumSamplingWeight != 1.f) {
 		  //Log(EWarn, "Need to use sampling Density = 1");
 		  currentMediumSampling = 1.f;
 		}
@@ -325,12 +329,14 @@ public:
 					samplingDensity = m_sigmaT[channel];
 				}
 
-				if(alwaysValid) {
+				if(strategy == EDistanceAlwaysValid) {
 				  // Use the max distance to correctly sample the media
 				  const Float maxDist = std::max((ray.maxt - ray.mint) - Epsilon,(Float) 0.0); // Add eps to avoid to fail
 				  const Float normalization = 1-math::fastexp(-samplingDensity*maxDist);
 				  sampledDistance = -math::fastlog(1 - rand*normalization) / samplingDensity;
-				} else {
+				} else if(strategy == EDistanceLong) {
+				  sampledDistance = -math::fastlog(Epsilon);
+                } else {
 				  // Regular way to sample the medium distance
 				  sampledDistance = -math::fastlog(1-rand) / samplingDensity;
 				}
@@ -357,7 +363,7 @@ public:
 			if (mRec.p == ray.o)
 				success = false;
 		} else {
-			if(alwaysValid) {
+			if(strategy == EDistanceAlwaysValid) {
 				Log(EWarn, "Failed to sample the distance but we set the option always valid\n"
 				"sampledDist: %f | disSurf: %f | rand: %f", sampledDistance, distSurf, rand);
 			}
@@ -374,7 +380,7 @@ public:
 			case EBalance:
 				mRec.pdfFailure = 0;
 				mRec.pdfSuccess = 0;
-				if(alwaysValid) {
+				if(strategy == EDistanceAlwaysValid) {
 				  const Float maxDist = ray.maxt - ray.mint;
 				  for (int i = 0; i < SPECTRUM_SAMPLES; ++i) {
 					const Float normalization = 1 - math::fastexp(-m_sigmaT[i] * maxDist);
@@ -395,7 +401,7 @@ public:
 
 			case ESingle:
 			case EManual:
-                if(alwaysValid) {
+                if(strategy == EDistanceAlwaysValid) {
                     const Float maxDist = ray.maxt - ray.mint;
                     const Float normalization = 1 - math::fastexp(-samplingDensity * maxDist);
                     Float tmp = math::fastexp(-samplingDensity * sampledDistance);
@@ -423,16 +429,20 @@ public:
 		return success;
 	}
 
-	void eval(const Ray &ray, MediumSamplingRecord &mRec, bool alwaysValid = false) const {
-		if(alwaysValid && m_strategy != EBalance && m_strategy != ESingle ) {
+	void eval(const Ray &ray, MediumSamplingRecord &mRec, EDistanceSampling strategy = EDistanceNormal) const {
+		if(strategy == EDistanceLong) {
+			Log(EError, "Not implemented");
+		}
+
+		if(strategy == EDistanceAlwaysValid && m_strategy != EBalance && m_strategy != ESingle ) {
 			Log(EError, "Always sampling is only available for Balance/Single sampling routine.");
 		}
-		if(alwaysValid && std::isinf(ray.maxt)) {
+		if(strategy == EDistanceAlwaysValid && std::isinf(ray.maxt)) {
 			Log(EError, "Impossible to use always valid with infinite distance (implementation 'issue')");
 		}
 
 		Float currentMediumSampling = m_mediumSamplingWeight;
-		if(alwaysValid && m_mediumSamplingWeight != 1.f) {
+		if(strategy == EDistanceAlwaysValid && m_mediumSamplingWeight != 1.f) {
 			currentMediumSampling = 1.f;
 		}
 
@@ -440,7 +450,7 @@ public:
 		switch (m_strategy) {
 			case EManual:
 			case ESingle: {
-                if(alwaysValid) {
+                if(strategy == EDistanceAlwaysValid) {
                     const Float maxDist = ray.maxt - ray.mint;
                     distance = mRec.t;
                     SAssert(distance > 0 && std::isfinite(distance));
@@ -460,7 +470,7 @@ public:
 			case EBalance: {
 					mRec.pdfSuccess = 0;
 					mRec.pdfFailure = 0;
-					if(alwaysValid) {
+					if(strategy == EDistanceAlwaysValid) {
 						const Float maxDist = ray.maxt - ray.mint;
 						distance = mRec.t;
 						SAssert(distance > 0 && std::isfinite(distance));
@@ -503,6 +513,10 @@ public:
 	}
 
 	bool isHomogeneous() const {
+		return true;
+	}
+
+	bool isMedium(const Point& _p) const {
 		return true;
 	}
 

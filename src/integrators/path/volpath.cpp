@@ -385,7 +385,7 @@ public:
             // We do not add the light contribution
           } else {
             if (rRec.depth + 1 >= m_minDepth && nbSurfaceInteractions >= m_minCameraDepth) {
-              SLog(EError, "Impossible !");
+//              SLog(EError, "Impossible !");
               Li += throughput * its.Le(-ray.d);
             }
           }

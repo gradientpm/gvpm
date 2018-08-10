@@ -1165,7 +1165,7 @@ public:
           // Sample a distance inside the participating media
           Ray ray(oBeam, dBeam, Epsilon, beamDist, 0.f);
           MediumSamplingRecord mRec;
-          if (currentMedium->sampleDistance(ray, mRec, sampler, true, randSample)) {
+          if (currentMedium->sampleDistance(ray, mRec, sampler, EDistanceAlwaysValid, randSample)) {
             // Update the ray max t because it is used in grad. volume computation
             ray.maxt = mRec.t;
 

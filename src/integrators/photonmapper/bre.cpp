@@ -172,8 +172,6 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium, int ma
   Spectrum result(0.0f);
 
   const PhaseFunction *phase = medium->getPhaseFunction();
-  MediumSamplingRecord mRec;
-
   while (stackPos > 0) {
     const BRENode &node = m_nodes[index];
     const Photon &photon = node.photon;
@@ -233,7 +231,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium, int ma
         medium->eval(baseRay, mRecBase);
 
         result += mRecBase.transmittance * node.photon.getPower()
-            * phase->eval(PhaseFunctionSamplingRecord(mRec, wi, -ray.d, EImportance)) *
+            * phase->eval(PhaseFunctionSamplingRecord(mRecBase, wi, -ray.d, EImportance)) *
             (weight * m_scaleFactor) * invPdfSampling;
 
       } else {
@@ -251,7 +249,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium, int ma
         medium->eval(baseRay, mRecBase);
 
         result += mRecBase.transmittance * node.photon.getPower()
-            * phase->eval(PhaseFunctionSamplingRecord(mRec, wi, -ray.d, EImportance)) *
+            * phase->eval(PhaseFunctionSamplingRecord(mRecBase, wi, -ray.d, EImportance)) *
             (weight * m_scaleFactor);
       }
     }
