@@ -64,14 +64,14 @@ bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
                 return false;
         }
 
-//		if(longBeam) {
-//			// No sampling decision to stop inside the volume
-//			// Determinstic decision
-//			pdf[mode] = pdf[1-mode] = 1.f;
-//		} else {
+		if(longBeam) {
+			// No sampling decision to stop inside the volume
+			// Determinstic decision
+			pdf[mode] = pdf[1-mode] = 1.f;
+		} else {
 			pdf[mode]   = succ->isMediumInteraction() ? mRec.pdfSuccess    : mRec.pdfFailure;
 			pdf[1-mode] = pred->isMediumInteraction() ? mRec.pdfSuccessRev : mRec.pdfFailure;
-//		}
+		}
 		weight[mode]   = mRec.transmittance / pdf[mode];
 		weight[1-mode] = mRec.transmittance / pdf[1-mode];
 	}
