@@ -1,16 +1,16 @@
 # Gradient-domain Volumetric Photon Density Estimation
 
-![](https://beltegeuse.github.io/research/img/publications/GradientVolumetricPM.png)
+![](https://profs.etsmtl.ca/agruson/publication/GradientVolumetricPM.png)
 
-This is the code release for the paper [Gradient-domain Volumetric Photon Density Estimation](http://beltegeuse.s3-website-ap-northeast-1.amazonaws.com/research/2018_GVPM.pdf) in SIGGRAPH 2018. 
+This is the code release for the paper [Gradient-domain Volumetric Photon Density Estimation](https://data.adrien-gruson.com/research/2018_GVPM.pdf) in SIGGRAPH 2018. 
 
 It extends Mitsuba 0.5.0 to implement a group of rendering techniques to render homogeneous participating media.
 The code can be compiled on Windows 10 with Visual Studio 2013, and Arch Linux platform. It is preferable to use CMake to compile this project.
 
 ## Download
 
-- [Paper](http://beltegeuse.s3-website-ap-northeast-1.amazonaws.com/research/2018_GVPM.pdf)
-- [Scene data and reference images](http://beltegeuse.s3-website-ap-northeast-1.amazonaws.com/research/2018_GVPM/comparison/index.html)
+- [Paper](https://data.adrien-gruson.com/research/2018_GVPM.pdf)
+- [Scene data and reference images](https://data.adrien-gruson.com/research/2018_GVPM/comparison/index.html)
 - Mitsuba dependencies
 : [Windows](https://www.mitsuba-renderer.org/repos/dependencies_windows) 
 and [Mac](https://www.mitsuba-renderer.org/repos/dependencies_macos).
